@@ -27,16 +27,17 @@ def indexer(web_page_pile, solr):
     #        sys.stderr.write("DEBUG: saved tweet %s\n" % tid)
 
 
-def mongo_retriever(web_entity_pile, web_page_pile,mongo_coll):
+def mongo_retriever(web_entity_pile, web_page_pile,mongo_coll,accepted_content_types):
     log=TimeElapsedLogging.create_log("mongo_retriever","mongo_retriever.log")
     while True:
         todo = []
         while not web_entity_pile.empty():
             we=web_entity_pile.get()
-            log.log(logging.INFO,we)
-            # mongo_coll.find({"url": {"$in": [page["url"] for page in web_pages["result"]]},
-            #   "content_type": {"$in": accepted_content_types}
-            # })
+            log.log(logging.INFO,"getting pages from %s"%we["name"])
+            web_pages=we["web_pages"]
+            mongo_coll.find({"url": {"$in": [page["url"] for page in web_pages]},
+               "content_type": {"$in": accepted_content_types}
+             })
             web_entity_pile.task_done()
 
 
@@ -71,6 +72,9 @@ if __name__=='__main__':
         db = pymongo.Connection(conf['mongo']['host'], conf['mongo']['port'])[conf["mongo"]["db"]]
         coll = db[conf['mongo']['web_pages_collection']]
         coll.ensure_index([('url', pymongo.ASCENDING)], background=True)
+        # prepare conte_type filter
+        with open(conf['mongo']['contenttype_whitelist_filename']) as content_type_whitelist :
+            accepted_content_types=content_type_whitelist.read().split("\n")
     except Exception as e:
         print type(e), e
         sys.stderr.write('ERROR: Could not initiate connection to MongoDB\n')
@@ -102,7 +106,7 @@ if __name__=='__main__':
     hyphe_core_proc.daemon = True
     hyphe_core_proc.start()
 
-    mongo_proc = Process(target=mongo_retriever, args=((web_entity_pile), (web_page_pile), coll))
+    mongo_proc = Process(target=mongo_retriever, args=((web_entity_pile), (web_page_pile), coll, accepted_content_types))
     mongo_proc.daemon = True
     mongo_proc.start()
 

@@ -1,0 +1,5 @@
+text/html
+text/xml
+text/plain
+application/rss+xml
+application/xml

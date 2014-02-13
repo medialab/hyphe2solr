@@ -8,7 +8,8 @@
     "host" : "localhost",
     "port" : 27017,
     "db" : "hci",
-    "web_pages_collection" : "crawler.pages"
+    "web_pages_collection" : "crawler.pages",
+    "contenttype_whitelist_filename" : "content_type_whitelist.txt"
   },
   "hyphe-core" : {
     "host" : "localhost",
