@@ -3,7 +3,8 @@
 
 # system and utils
 import sys, time, re, json
-from multiprocessing import Process, Queue
+from multiprocessing import Process, JoinableQueue
+
 # data sources
 import pymongo
 import sunburnt
@@ -26,13 +27,15 @@ def mongo_retriever(web_entity_pile, web_page_pile,mongo_coll):
 
     while True:
         todo = []
-        while not pile.empty():
-            todo.append(pile.get())
-        save = prepare_tweets(todo)
-        for t in save:
-            tid = db.save(t)
+        while not web_entity_pile.empty():
+            we=web_entity_pile.get()
+            print we
+            # mongo_coll.find({"url": {"$in": [page["url"] for page in web_pages["result"]]},
+            #   "content_type": {"$in": accepted_content_types}
+            # })
+            web_entity_pile.task_done()
 
-        time.sleep(30)
+
 
 def hyphe_core_retriever(web_entity_pile,hyphe_core,web_entity_status):
     web_entities = hyphe_core.store.get_webentities_by_status(web_entity_status)
@@ -42,7 +45,8 @@ def hyphe_core_retriever(web_entity_pile,hyphe_core,web_entity_status):
         web_pages = hyphe_core.store.get_webentity_pages(we["id"])
         print("retrieved %s pages of web entity %s"%(len(web_pages["result"]),we["name"]))
         # total_pages+=len(web_pages["result"])
-        web_entity_pile.put(web_pages)
+        we["web_pages"]=web_pages
+        web_entity_pile.put(we)
 
 
 def pile_logger(web_entity_pile,web_page_pile):
@@ -82,8 +86,8 @@ if __name__=='__main__':
         sys.exit(1)
 
 
-    web_entity_pile = Queue()
-    web_page_pile = Queue()    
+    web_entity_pile = JoinableQueue()
+    web_page_pile = JoinableQueue()    
 
     pile_logger_proc = Process(target=pile_logger,args=((web_entity_pile),(web_page_pile)))
     pile_logger_proc.daemon = True
@@ -95,11 +99,13 @@ if __name__=='__main__':
 
     mongo_proc = Process(target=mongo_retriever, args=((web_entity_pile), (web_page_pile), coll))
     mongo_proc.daemon = True
-    #mongo_proc.start()
+    mongo_proc.start()
 
     solr_proc = Process(target=indexer, args=((web_page_pile), solr))
     solr_proc.daemon = True
     #solr_proc.start()
 
-    # join the last proc to finish to die with him
+    # wait the first provider to finish
     hyphe_core_proc.join()
+    # wait the pile to be processed
+    web_entity_pile.join()

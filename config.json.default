@@ -1,0 +1,17 @@
+{
+  "solr":{
+    "host":"localhost",
+    "port":"8080",
+    "path":"solr/hyphe"
+  },
+  "mongo" : {
+    "host" : "localhost",
+    "port" : 27017,
+    "db" : "hci",
+    "web_pages_collection" : "crawler.pages"
+  },
+  "hyphe-core" : {
+    "host" : "localhost",
+    "port" : 6978
+  }
+}
