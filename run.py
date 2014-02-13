@@ -4,11 +4,15 @@
 # system and utils
 import sys, time, re, json
 from multiprocessing import Process, JoinableQueue
+import logging
 
 # data sources
 import pymongo
 import sunburnt
 import jsonrpclib
+
+# logging
+import TimeElapsedLogging
 
 
 def indexer(web_page_pile, solr):
@@ -24,12 +28,12 @@ def indexer(web_page_pile, solr):
 
 
 def mongo_retriever(web_entity_pile, web_page_pile,mongo_coll):
-
+    log=TimeElapsedLogging.create_log("mongo_retriever","mongo_retriever.log")
     while True:
         todo = []
         while not web_entity_pile.empty():
             we=web_entity_pile.get()
-            print we
+            log.log(logging.INFO,we)
             # mongo_coll.find({"url": {"$in": [page["url"] for page in web_pages["result"]]},
             #   "content_type": {"$in": accepted_content_types}
             # })
@@ -38,12 +42,13 @@ def mongo_retriever(web_entity_pile, web_page_pile,mongo_coll):
 
 
 def hyphe_core_retriever(web_entity_pile,hyphe_core,web_entity_status):
+    log=TimeElapsedLogging.create_log("hyphe_core_retriever","hyphe_core_retriever.log")
     web_entities = hyphe_core.store.get_webentities_by_status(web_entity_status)
     nb_web_entities=len(web_entities["result"])
     web_entities=web_entities["result"]
     for we in web_entities: 
         web_pages = hyphe_core.store.get_webentity_pages(we["id"])
-        print("retrieved %s pages of web entity %s"%(len(web_pages["result"]),we["name"]))
+        log.log(logging.INFO,"retrieved %s pages of web entity %s"%(len(web_pages["result"]),we["name"]))
         # total_pages+=len(web_pages["result"])
         we["web_pages"]=web_pages
         web_entity_pile.put(we)
@@ -52,7 +57,7 @@ def hyphe_core_retriever(web_entity_pile,hyphe_core,web_entity_status):
 def pile_logger(web_entity_pile,web_page_pile):
     while True :
         print "%s items in web_entity_pile, %s items in web_page_pile"%(web_entity_pile.qsize(),web_page_pile.qsize())
-        time.sleep(10)
+        time.sleep(0.5)
 
 if __name__=='__main__':
     try:
