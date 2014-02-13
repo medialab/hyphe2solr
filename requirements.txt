@@ -1,0 +1,5 @@
+sunburnt
+lxml
+httplib2
+pymongo
+jsonrpclib
