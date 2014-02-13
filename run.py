@@ -9,7 +9,6 @@ import pymongo
 import sunburnt
 import jsonrpclib
 
-from tweets import prepare_tweets
 
 def indexer(web_page_pile, solr):
 
@@ -41,15 +40,15 @@ def hyphe_core_retriever(web_entity_pile,hyphe_core,web_entity_status):
     web_entities=web_entities["result"]
     for we in web_entities: 
         web_pages = hyphe_core.store.get_webentity_pages(we["id"])
-        print("retrieved %s pages of web entity %s"%(len(web_pages["result"]),web_entity["name"]))
-        total_pages+=len(web_pages["result"])
+        print("retrieved %s pages of web entity %s"%(len(web_pages["result"]),we["name"]))
+        # total_pages+=len(web_pages["result"])
         web_entity_pile.put(web_pages)
 
 
 def pile_logger(web_entity_pile,web_page_pile):
     while True :
         print "%s items in web_entity_pile, %s items in web_page_pile"%(web_entity_pile.qsize(),web_page_pile.qsize())
-        sleep(10)
+        time.sleep(10)
 
 if __name__=='__main__':
     try:
@@ -60,22 +59,25 @@ if __name__=='__main__':
         sys.stderr.write('ERROR: Could not read configuration\n')
         sys.exit(1)
     try:
-        db = pymongo.Connection(conf['mongo']['host'], conf['mongo']['port'])[conf['mongo']['db']]
-        coll = db['tweets']
+        db = pymongo.Connection(conf['mongo']['host'], conf['mongo']['port'])[conf["mongo"]["db"]]
+        coll = db[conf['mongo']['web_pages_collection']]
         coll.ensure_index([('url', pymongo.ASCENDING)], background=True)
-    except:
+    except Exception as e:
+        print type(e), e
         sys.stderr.write('ERROR: Could not initiate connection to MongoDB\n')
         sys.exit(1)
     # solr
     try:
-        solr = sunburnt.SolrInterface("http://%s:%s/%s" % (config["solr"]['host'], config["solr"]['port'], config["solr"]['path'].lstrip('/')))
-    except:
+        solr = sunburnt.SolrInterface("http://%s:%s/%s" % (conf["solr"]['host'], conf["solr"]['port'], conf["solr"]['path'].lstrip('/')))
+    except Exception as e:
+        print type(e), e
         sys.stderr.write('ERROR: Could not initiate connection to SOLR node\n')
         sys.exit(1)
     # hyphe core
     try:
-        hyphe_core=jsonrpclib.Server('http://%s:%s'%(config["hyphe"]["host"],config["hyphe"]["port"]))
-    except:
+        hyphe_core=jsonrpclib.Server('http://%s:%s'%(conf["hyphe-core"]["host"],conf["hyphe-core"]["port"]))
+    except Exception as e:
+        print type(e), e
         sys.stderr.write('ERROR: Could not initiate connection to hyphe core\n')
         sys.exit(1)
 
@@ -87,7 +89,7 @@ if __name__=='__main__':
     pile_logger_proc.daemon = True
     pile_logger_proc.start()
 
-    hyphe_core_proc = Process(target=hyphe_core_retriever, args=((web_entity_pile), hyphe_core))
+    hyphe_core_proc = Process(target=hyphe_core_retriever, args=((web_entity_pile), hyphe_core,"IN"))
     hyphe_core_proc.daemon = True
     hyphe_core_proc.start()
 

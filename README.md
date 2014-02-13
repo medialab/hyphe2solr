@@ -1,8 +1,9 @@
 # principles
 
 This scripts needs :
-- one Hyphe core instance
-- one Hyphe web-pages Mongo instance
+- one Hyphe server and more precisely :
+	- one Hyphe core instance
+	- one Hyphe web-pages Mongo instance
 - one SOLR node ready to index web-pages
 
 What it does is :
