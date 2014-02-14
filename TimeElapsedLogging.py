@@ -15,13 +15,13 @@ class TimeElapsedFilter(logging.Filter):
 
 # TimeElapsed enabled logging factory
 def create_log(name,filename,format="%(asctime)-15s %(name)-5s %(levelname)-8s [ %(seconds)-4s ] %(message)s") :
-   logging.basicConfig(level=logging.DEBUG,
+  logging.basicConfig(level=logging.DEBUG,
                        format=format,
                        filename=filename)
-   log = logging.getLogger(name)
-   timer_filter = TimeElapsedFilter()
-   log.addFilter(timer_filter)
-   return log
+  log = logging.getLogger(name)
+  timer_filter = TimeElapsedFilter()
+  log.addFilter(timer_filter)
+  return log
 
 if __name__ == "__main__":
   from random import choice
