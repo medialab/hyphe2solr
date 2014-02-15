@@ -155,10 +155,12 @@ if __name__=='__main__':
         mongo_proc.daemon = True
         mongo_proc.start()
        
-
-        solr_proc = Process(target=indexer, args=(web_page_pile, solr))
-        solr_proc.daemon = True
-        solr_proc.start()
+        solr_procs=[]
+        for _ in range(conf["hyphe2solr"]["nb_indexer"]):
+            solr_proc = Process(target=indexer, args=(web_page_pile, solr))
+            solr_proc.daemon = True
+            solr_proc.start()
+            solr_procs.append(solr_proc)
 
         
         pile_logger_proc = Process(target=pile_logger,args=((web_entity_pile),(web_page_pile)))
@@ -178,7 +180,8 @@ if __name__=='__main__':
         mainlog.log(logging.INFO,"web page pile finished, stopping pile logger, mongo retreiver and solr_proc proc")
         pile_logger_proc.terminate()
         mongo_proc.terminate()
-        solr_proc.terminate()
+        for solr_proc in solr_procs :
+            solr_proc.terminate()
     except Exception as e :
         mainlog.log(logging.ERROR,"%s %s"%(type(e),e))
     exit(0)

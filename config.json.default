@@ -1,4 +1,8 @@
 {
+  "hyphe2solr":{
+    "nb_indexer":4,
+    "nb_mongo_retriever":1
+  },
   "solr":{
     "host":"localhost",
     "port":"8080",
