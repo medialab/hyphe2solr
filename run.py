@@ -54,7 +54,7 @@ def indexer(web_page_pile, solr):
                         pass
                         # log.log(logging.WARNING,"Exception with document :%s"%(solr_document["id"]))
                         #TODO : write error document to disk
-            solr.commit()
+            
             log.log(logging.INFO,"'%s' indexed (%s web pages on %s)"%(web_entity["name"],nb_pages,len(web_entity["pages_mongo"])))
             web_page_pile.task_done()
     except Exception as e:
@@ -151,10 +151,13 @@ if __name__=='__main__':
         hyphe_core_proc.daemon = True
         hyphe_core_proc.start()
 
-        mongo_proc = Process(target=mongo_retriever, args=((web_entity_pile), (web_page_pile), coll, accepted_content_types))
-        mongo_proc.daemon = True
-        mongo_proc.start()
-       
+        mongo_procs=[]
+        for _ in range(conf["hyphe2solr"]["nb_mongo_retriever"]):
+            mongo_proc = Process(target=mongo_retriever, args=((web_entity_pile), (web_page_pile), coll, accepted_content_types))
+            mongo_proc.daemon = True
+            mongo_proc.start()
+            mongo_procs.append(mongo_proc)
+
         solr_procs=[]
         for _ in range(conf["hyphe2solr"]["nb_indexer"]):
             solr_proc = Process(target=indexer, args=(web_page_pile, solr))
@@ -172,16 +175,26 @@ if __name__=='__main__':
         # wait the first provider to finish
         mainlog.log(logging.INFO,"waiting hyphe-core retriever end")
         hyphe_core_proc.join()
+        
         # wait the pile to be processed
         mainlog.log(logging.INFO,"waiting end of web entity pile")
         web_entity_pile.join()
+
+        # wait the second pile to be processed
         mainlog.log(logging.INFO,"web entity pile finished, waiting end of web page pile")
         web_page_pile.join()
+        
         mainlog.log(logging.INFO,"web page pile finished, stopping pile logger, mongo retreiver and solr_proc proc")
         pile_logger_proc.terminate()
-        mongo_proc.terminate()
+        for mongo_proc in mongo_procs:
+            mongo_proc.terminate()
         for solr_proc in solr_procs :
             solr_proc.terminate()
+        solr.commit()
+        mainlog.log(logging.INFO,"changes to solr index commited")
+
+        solr.optimize()
+        mainlog.log(logging.INFO,"Solr index optimized")
     except Exception as e :
-        mainlog.log(logging.ERROR,"%s %s"%(type(e),e))
+        logging.exception("%s %s"%(type(e),e))
     exit(0)
