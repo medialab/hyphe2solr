@@ -6,7 +6,8 @@ from time import time
 class TimeElapsedFilter(logging.Filter):
     def __init__(self):
         self._start = time()
-        super(TimeElapsedFilter, self).__init__()
+        logging.Filter.__init__(self)
+
  
     def filter(self, record):
         record.seconds = '%.2f s' % ((time() - self._start))
