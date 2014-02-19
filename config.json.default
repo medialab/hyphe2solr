@@ -1,7 +1,8 @@
 {
   "hyphe2solr":{
     "nb_indexer":4,
-    "nb_mongo_retriever":1
+    "nb_mongo_retriever":1,
+    "web_entity_status_filter":["IN","OUT","UNDECIDED","DISCOVERED"]
   },
   "solr":{
     "host":"localhost",

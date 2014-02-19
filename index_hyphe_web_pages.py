@@ -147,7 +147,7 @@ if __name__=='__main__':
         
         
         
-        hyphe_core_proc = Process(target=hyphe_core_retriever, args=((web_entity_pile), hyphe_core,"IN"))
+        hyphe_core_proc = Process(target=hyphe_core_retriever, args=((web_entity_pile), hyphe_core,conf["hyphe2solr"]["web_entity_status_filter"]))
         hyphe_core_proc.daemon = True
         hyphe_core_proc.start()
 
