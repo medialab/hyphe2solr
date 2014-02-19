@@ -84,7 +84,9 @@ def mongo_retriever(web_entity_pile, web_page_pile,coll,accepted_content_types):
 def hyphe_core_retriever(web_entity_pile,hyphe_core,web_entity_status):
     log=TimeElapsedLogging.create_log("hyphe_core_retriever",filename="hyphe_core_retriever.log")
     try:
-        web_entities = hyphe_core.store.get_webentities_by_status(web_entity_status)
+        web_entities=[]
+        for status in web_entity_status :
+            web_entities += hyphe_core.store.get_webentities_by_status(status)
         nb_web_entities=len(web_entities["result"])
         web_entities=web_entities["result"]
         for we in web_entities: 
