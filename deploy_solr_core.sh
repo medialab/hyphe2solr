@@ -1,9 +1,12 @@
 #!/bin/bash
 
-service tomcat7 stop
-solr_data_path="/usr/share/solr/example/solr/"
-rm -rf $solr_data_path/hyphe
-cp solr_hyphe_core $solr_data_path/hyphe
-chown -R tomcat7:tomcat7 $solr_data_path/hyphe/*
-chown tomcat7:tomcat7 $solr_data_path/hyphe
-service tomcat7 start
+solr_core=$(grep '"path":' config.json | head -n 1 | sed 's#^.*/\(.*\)"\s*$#\1#')
+service tomcat6 stop
+solr_data_path="/store/solr-data"
+rm -rf $solr_data_path/$solr_core
+mkdir $solr_data_path/$solr_core
+cp -R solr_hyphe_core/* $solr_data_path/$solr_core/
+echo "name=$solr_core" > $solr_data_path/$solr_core/core.properties
+
+chown -R tomcat:tomcat $solr_data_path/$solr_core
+service tomcat6 start
