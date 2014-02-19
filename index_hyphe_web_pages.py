@@ -86,9 +86,8 @@ def hyphe_core_retriever(web_entity_pile,hyphe_core,web_entity_status):
     try:
         web_entities=[]
         for status in web_entity_status :
-            web_entities += hyphe_core.store.get_webentities_by_status(status)
-        nb_web_entities=len(web_entities["result"])
-        web_entities=web_entities["result"]
+            web_entities += hyphe_core.store.get_webentities_by_status(status)["result"]
+        nb_web_entities=len(web_entities)
         for we in web_entities: 
             web_pages = hyphe_core.store.get_webentity_pages(we["id"])
             log.log(logging.INFO,"retrieved %s pages of web entity %s"%(len(web_pages["result"]),we["name"]))
