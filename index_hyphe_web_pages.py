@@ -51,8 +51,7 @@ def indexer(web_page_pile, solr):
                     try:
                          solr.add(solr_document)
                     except Exception :
-                        pass
-                        # log.log(logging.WARNING,"Exception with document :%s"%(solr_document["id"]))
+                        errorlog.info("Exception with document :%s %s"%(solr_document["id"],solr_document["url"]))
                         #TODO : write error document to disk
             
             log.log(logging.INFO,"'%s' indexed (%s web pages on %s)"%(web_entity["name"],nb_pages,len(web_entity["pages_mongo"])))
@@ -64,20 +63,19 @@ def indexer(web_page_pile, solr):
 
 
 def mongo_retriever(web_entity_pile, web_page_pile,coll,accepted_content_types):
-    try:
+    
         log=TimeElapsedLogging.create_log("mongo_retriever",filename="mongo_retriever.log")
         while True:
-            if not web_entity_pile.empty():
+            try:
                 we=web_entity_pile.get()
                 pages_mongo=coll.find({"url": {"$in": [page["url"] for page in we["web_pages"]]},"content_type": {"$in": accepted_content_types}})
                 del(we["web_pages"])
                 we["pages_mongo"]=list(pages_mongo)
                 web_page_pile.put(we)
                 log.log(logging.INFO,"got %s mongo pages from %s"%(pages_mongo.count(),we["name"]))
-                web_entity_pile.task_done()
-    except Exception as e : 
-        log.log(logging.ERROR,"%s %s"%(type(e),e))
-        exit(1)
+            except Exception as e : 
+                log.log(logging.ERROR,"%s %s"%(type(e),e))
+            web_entity_pile.task_done()
 
 
 
