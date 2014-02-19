@@ -17,10 +17,11 @@ import TimeElapsedLogging
 
 def indexer(web_page_pile, solr):
     log=TimeElapsedLogging.create_log("solr_indexer","solr_indexer.log")
-    try :
-        log.log(logging.INFO,"started")
     
-        while True: 
+    log.log(logging.INFO,"started")
+
+    while True: 
+        try :
             web_entity=web_page_pile.get()
             log.log(logging.INFO,"sarting %s"%web_entity["name"])
             nb_pages=0
@@ -56,9 +57,8 @@ def indexer(web_page_pile, solr):
             
             log.log(logging.INFO,"'%s' indexed (%s web pages on %s)"%(web_entity["name"],nb_pages,len(web_entity["pages_mongo"])))
             web_page_pile.task_done()
-    except Exception as e:
-        log.exception("exception in indexer")#"%s %s"%(type(e),e))
-        exit(1)
+        except Exception as e:
+            log.exception("exception in indexer")#"%s %s"%(type(e),e))
     #        sys.stderr.write("DEBUG: saved tweet %s\n" % tid)
 
 
