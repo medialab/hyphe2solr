@@ -56,10 +56,10 @@ def indexer(web_page_pile, solr):
                         #TODO : write error document to disk
             
             log.log(logging.INFO,"'%s' indexed (%s web pages on %s)"%(web_entity["name"],nb_pages,len(web_entity["pages_mongo"])))
-            web_page_pile.task_done()
         except Exception as e:
             log.exception("exception in indexer")#"%s %s"%(type(e),e))
-    #        sys.stderr.write("DEBUG: saved tweet %s\n" % tid)
+        web_page_pile.task_done()	    
+#        sys.stderr.write("DEBUG: saved tweet %s\n" % tid)
 
 
 def mongo_retriever(web_entity_pile, web_page_pile,coll,accepted_content_types):
@@ -82,18 +82,21 @@ def mongo_retriever(web_entity_pile, web_page_pile,coll,accepted_content_types):
 def hyphe_core_retriever(web_entity_pile,hyphe_core,web_entity_status):
     log=TimeElapsedLogging.create_log("hyphe_core_retriever",filename="hyphe_core_retriever.log")
     try:
+        total_pages=0
         web_entities=[]
         for status in web_entity_status :
             web_entities += hyphe_core.store.get_webentities_by_status(status)["result"]
         nb_web_entities=len(web_entities)
-        for we in web_entities: 
+        log.info("retrieved %s web entities"%(nb_web_entities))
+	for we in web_entities: 
             web_pages = hyphe_core.store.get_webentity_pages(we["id"])
             log.log(logging.INFO,"retrieved %s pages of web entity %s"%(len(web_pages["result"]),we["name"]))
-            # total_pages+=len(web_pages["result"])
+            total_pages+=len(web_pages["result"])
             we["web_pages"]=web_pages["result"]
             web_entity_pile.put(we)
+	log.info("retrieved %s web pages in total"%(total_pages))
     except Exception as e : 
-        log.log(logging.ERROR,"%s %s"%(type(e),e))
+        log.exception("exception in hyphe core retriever")
         exit(1)
 
 def pile_logger(web_entity_pile,web_page_pile):
