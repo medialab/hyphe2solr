@@ -51,7 +51,7 @@ def indexer(web_page_pile, solr):
                     try:
                          solr.add(solr_document)
                     except Exception :
-                        errorlog.info("Exception with document :%s %s"%(solr_document["id"],solr_document["url"]))
+                        log.info("Exception with document :%s %s"%(solr_document["id"],solr_document["url"]))
                         #TODO : write error document to disk
             
             log.log(logging.INFO,"'%s' indexed (%s web pages on %s)"%(web_entity["name"],nb_pages,len(web_entity["pages_mongo"])))
