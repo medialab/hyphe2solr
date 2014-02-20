@@ -83,6 +83,7 @@ def mongo_retriever(web_entity_pile, web_page_pile,coll,accepted_content_types):
                             "content_type": {"$in": accepted_content_types}
                         },
                         fields=["_id","encoding","url","lru","depth","body"])
+                    log.debug("%s %s: got %s pages in slice %s %s"%(we["name"],we["id"],pages_mongo_slice.count(),i,len(urls_slice)))
                     pages_mongo+=list(pages_mongo_slice)
                     i=i+url_slice_len
 
