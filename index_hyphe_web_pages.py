@@ -122,13 +122,15 @@ def hyphe_core_retriever(web_entity_pile,hyphe_core,web_entity_status):
             web_entities += hyphe_core.store.get_webentities_by_status(status)["result"]
         nb_web_entities=len(web_entities)
         log.info("retrieved %s web entities"%(nb_web_entities))
+        nb_we_treated=0
     	for we in web_entities: 
                 web_pages = hyphe_core.store.get_webentity_pages(we["id"])
                 log.log(logging.INFO,"retrieved %s pages of web entity %s"%(len(web_pages["result"]),we["name"]))
                 total_pages+=len(web_pages["result"])
                 we["web_pages"]=web_pages["result"]
                 web_entity_pile.put(we)
-    	log.info("retrieved %s web pages in total"%(total_pages))
+                nb_we_treated+=1
+    	log.info("retrieved %s web pages in total from %s web entities (%s)"%(total_pages,nb_we_treated,nb_web_entities))
     except Exception as e : 
         log.exception("exception in hyphe core retriever")
         exit(1)
