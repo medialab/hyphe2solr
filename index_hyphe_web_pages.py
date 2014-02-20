@@ -27,7 +27,7 @@ def indexer(web_page_pile, solr):
             nb_pages=0
             for page_mongo in web_entity["pages_mongo"]:
                 if "body" in page_mongo.keys():
-                    nb_pages+=1
+                    
                     body = page_mongo["body"].decode('zip')
                     try:
                         body = body.decode(page_mongo.get("encoding",""))
@@ -51,15 +51,15 @@ def indexer(web_page_pile, solr):
                     #solr_json_docs.append(solr_document)
                     try:
                          solr.add(solr_document)
+                         nb_pages+=1
                     except Exception :
-                        log.info("Exception with document :%s %s"%(solr_document["id"],solr_document["url"]))
+                        log.info("Exception with document :%s %s %s"%(solr_document["id"],solr_document["url"],solr_document["encoding"]))
                         #TODO : write error document to disk
             
             log.log(logging.INFO,"'%s' indexed (%s web pages on %s)"%(web_entity["name"],nb_pages,len(web_entity["pages_mongo"])))
         except Exception as e:
             log.exception("exception in indexer")#"%s %s"%(type(e),e))
         web_page_pile.task_done()	    
-#        sys.stderr.write("DEBUG: saved tweet %s\n" % tid)
 
 
 def mongo_retriever(web_entity_pile, web_page_pile,coll,accepted_content_types):
@@ -68,11 +68,44 @@ def mongo_retriever(web_entity_pile, web_page_pile,coll,accepted_content_types):
         while True:
             try:
                 we=web_entity_pile.get()
-                pages_mongo=coll.find({"url": {"$in": [page["url"] for page in we["web_pages"]]},"content_type": {"$in": accepted_content_types}})
-                del(we["web_pages"])
-                we["pages_mongo"]=list(pages_mongo)
-                web_page_pile.put(we)
-                log.log(logging.INFO,"got %s mongo pages from %s"%(pages_mongo.count(),we["name"]))
+                urls=[page["url"] for page in we["web_pages"]]
+                nb_urls=len(urls)
+                last_id=""
+                pages_mongo=[]
+
+
+                i=0
+                url_slice_len=1000
+                while i<len(urls) :
+                    urls_slice=urls[i:i+url_slice_len]
+                    pages_mongo_slice=coll.find({
+                            "url": {"$in": urls_slice},
+                            "content_type": {"$in": accepted_content_types}
+                        },
+                        fields=["_id","encoding","url","lru","depth","body"])
+                    pages_mongo+=list(pages_mongo_slice)
+                    i=i+url_slice_len
+
+                # while True :
+                #     pages_mongo_slice=coll.find({
+                #             "url": {"$in": urls},
+                #             "content_type": {"$in": accepted_content_types},
+                #             "_id": {"$gt": last_id}}
+                #         },
+                #         fields=["_id","encoding","url","lru","depth","body"]).limit(1000).sort("_id")
+                #     if pages_mongo_slice.count(with_limit_and_skip=True)>0 :
+                #         pages_mongo.append(list(pages_mongo_slice))
+                #         last_id=pages_mongo[-1]["_id"]
+                #     else:
+                #         # no more pages to retrieve
+                #         break
+                if len(pages_mongo)>0:
+                    del(we["web_pages"])
+                    we["pages_mongo"]=pages_mongo
+                    web_page_pile.put(we)
+                    log.log(logging.INFO,"got %s mongo pages on %s web page urls from %s"%(len(pages_mongo),nb_urls,we["name"]))
+                else:
+                    log.warning("no pages on %s retrieved from %s"%(nb_urls,we["name"]))
             except Exception as e : 
                 log.log(logging.ERROR,"%s %s"%(type(e),e))
             web_entity_pile.task_done()
@@ -88,13 +121,13 @@ def hyphe_core_retriever(web_entity_pile,hyphe_core,web_entity_status):
             web_entities += hyphe_core.store.get_webentities_by_status(status)["result"]
         nb_web_entities=len(web_entities)
         log.info("retrieved %s web entities"%(nb_web_entities))
-	for we in web_entities: 
-            web_pages = hyphe_core.store.get_webentity_pages(we["id"])
-            log.log(logging.INFO,"retrieved %s pages of web entity %s"%(len(web_pages["result"]),we["name"]))
-            total_pages+=len(web_pages["result"])
-            we["web_pages"]=web_pages["result"]
-            web_entity_pile.put(we)
-	log.info("retrieved %s web pages in total"%(total_pages))
+    	for we in web_entities: 
+                web_pages = hyphe_core.store.get_webentity_pages(we["id"])
+                log.log(logging.INFO,"retrieved %s pages of web entity %s"%(len(web_pages["result"]),we["name"]))
+                total_pages+=len(web_pages["result"])
+                we["web_pages"]=web_pages["result"]
+                web_entity_pile.put(we)
+    	log.info("retrieved %s web pages in total"%(total_pages))
     except Exception as e : 
         log.exception("exception in hyphe core retriever")
         exit(1)
