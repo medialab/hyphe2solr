@@ -113,33 +113,25 @@ def mongo_retriever(web_entity_pile, web_page_pile,coll,accepted_content_types):
 
 
 
-def hyphe_core_retriever(web_entity_pile,hyphe_core,web_entity_status):
+def hyphe_core_retriever(web_entity_pile,web_page_pile,hyphe_core_url):
     log=TimeElapsedLogging.create_log("hyphe_core_retriever",filename="hyphe_core_retriever.log")
-    try:
-        total_pages=0
-        web_entities=[]
-        for status in web_entity_status :
-            web_entities += hyphe_core.store.get_webentities_by_status(status)["result"]
-        nb_web_entities=len(web_entities)
-        log.info("retrieved %s web entities"%(nb_web_entities))
-        nb_we_treated=0
-    	for we in web_entities: 
-                web_pages = hyphe_core.store.get_webentity_pages(we["id"])
-                log.log(logging.INFO,"retrieved %s pages of web entity %s"%(len(web_pages["result"]),we["name"]))
-                total_pages+=len(web_pages["result"])
-                we["web_pages"]=web_pages["result"]
-                web_entity_pile.put(we)
-                nb_we_treated+=1
-    	log.info("retrieved %s web pages in total from %s web entities (%s)"%(total_pages,nb_we_treated,nb_web_entities))
-    except Exception as e : 
-        log.exception("exception in hyphe core retriever")
-        exit(1)
+    hyphe_core=jsonrpclib.Server(hyphe_core_url)
+    while True :
+        we=web_entity_pile.get()
+        log.log(logging.INFO,"retrieving pages of web entity %s"%(we["name"]))
+        web_pages = hyphe_core.store.get_webentity_pages(we["id"])
+        log.log(logging.INFO,"retrieved %s pages of web entity %s"%(len(web_pages["result"]),we["name"]))
+        we2 = dict(we)
+        we2["web_pages"]=web_pages["result"]
+        web_page_pile.put(we2)
+        web_entity_pile.task_done()
+ 
 
-def pile_logger(web_entity_pile,web_page_pile):
+def pile_logger(web_entity_pile,web_page_pile,html_code_pile):
     logging.basicConfig(level=logging.DEBUG,
                        filename="piles.log")
     while True :
-        logging.log(logging.INFO,"%s items in web_entity_pile, %s items in web_page_pile"%(web_entity_pile.qsize(),web_page_pile.qsize()))
+        logging.log(logging.INFO,"%s items in hyphe_pile, %s items in mongo_pile, %s in solr_pile"%(web_entity_pile.qsize(),web_page_pile.qsize(),html_code_pile.qsize()))
         time.sleep(1)
 
 if __name__=='__main__':
@@ -180,50 +172,67 @@ if __name__=='__main__':
         sys.exit(1)
 
     try:
-        web_entity_pile = JoinableQueue()
-        web_page_pile = JoinableQueue()    
+        web_entity_queue = JoinableQueue()
+        web_entity_urls_queue = JoinableQueue()
+        web_entity_htmlcode_queue = JoinableQueue()    
         
         
-        
-        hyphe_core_proc = Process(target=hyphe_core_retriever, args=((web_entity_pile), hyphe_core,conf["hyphe2solr"]["web_entity_status_filter"]))
-        hyphe_core_proc.daemon = True
-        hyphe_core_proc.start()
+        hyphe_core_procs=[]
+        for _ in range(conf["hyphe2solr"]["nb_hyphe_retriever"]):
+            hyphe_core_proc = Process(target=hyphe_core_retriever, args=(web_entity_queue,web_entity_urls_queue, 'http://%s:%s'%(conf["hyphe-core"]["host"],conf["hyphe-core"]["port"])))
+            hyphe_core_proc.daemon = True
+            hyphe_core_proc.start()
+            hyphe_core_procs.append(hyphe_core_proc)
 
         mongo_procs=[]
         for _ in range(conf["hyphe2solr"]["nb_mongo_retriever"]):
-            mongo_proc = Process(target=mongo_retriever, args=((web_entity_pile), (web_page_pile), coll, accepted_content_types))
+            mongo_proc = Process(target=mongo_retriever, args=(web_entity_urls_queue, web_entity_htmlcode_queue, coll, accepted_content_types))
             mongo_proc.daemon = True
             mongo_proc.start()
             mongo_procs.append(mongo_proc)
 
         solr_procs=[]
         for _ in range(conf["hyphe2solr"]["nb_indexer"]):
-            solr_proc = Process(target=indexer, args=(web_page_pile, solr))
+            solr_proc = Process(target=indexer, args=(web_entity_htmlcode_queue, solr))
             solr_proc.daemon = True
             solr_proc.start()
             solr_procs.append(solr_proc)
 
         
-        pile_logger_proc = Process(target=pile_logger,args=((web_entity_pile),(web_page_pile)))
+        pile_logger_proc = Process(target=pile_logger,args=(web_entity_queue,web_entity_urls_queue, web_entity_htmlcode_queue,))
         pile_logger_proc.daemon = True
         pile_logger_proc.start()
         
         mainlog=TimeElapsedLogging.create_log("main","main.log")
 
+        web_entity_status=conf["hyphe2solr"]["web_entity_status_filter"]
+        nb_web_entities=0
+        for status in web_entity_status :
+            mainlog.info("retrieving %s web entities"%(status))
+            wes=hyphe_core.store.get_webentities_by_status(status)["result"]
+            mainlog.info("retrieved %s web entities"%(len(wes)))
+            for we in wes:
+                web_entity_queue.put(we)
+                nb_web_entities+=1
+        mainlog.info("retrieved %s web entities"%(nb_web_entities))
+
         # wait the first provider to finish
-        mainlog.log(logging.INFO,"waiting hyphe-core retriever end")
-        hyphe_core_proc.join()
+        mainlog.log(logging.INFO,"waiting end of web entity pile")
+        web_entity_queue.join()
+
         
         # wait the pile to be processed
-        mainlog.log(logging.INFO,"waiting end of web entity pile")
-        web_entity_pile.join()
+        mainlog.log(logging.INFO,"waiting end of mongo pile")
+        web_entity_urls_queue.join()
 
         # wait the second pile to be processed
         mainlog.log(logging.INFO,"web entity pile finished, waiting end of web page pile")
-        web_page_pile.join()
+        web_entity_htmlcode_queue.join()
         
         mainlog.log(logging.INFO,"web page pile finished, stopping pile logger, mongo retreiver and solr_proc proc")
         pile_logger_proc.terminate()
+        for hyphe_core in hyphe_core_procs:
+            hyphe_proc.terminate()
         for mongo_proc in mongo_procs:
             mongo_proc.terminate()
         for solr_proc in solr_procs :
