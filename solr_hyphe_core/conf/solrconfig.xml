@@ -817,7 +817,7 @@
      <lst name="defaults">
        <str name="echoParams">explicit</str>
        <int name="rows">10</int>
-       <str name="df">tags_striped</str>
+       <str name="df">text</str>
      </lst>
     <!-- In addition to defaults, "appends" params can be specified
          to identify values which should be appended to the list of
@@ -879,7 +879,7 @@
        <str name="echoParams">explicit</str>
        <str name="wt">json</str>
        <str name="indent">true</str>
-       <str name="df">tags_striped</str>
+       <str name="df">text</str>
      </lst>
   </requestHandler>
 
@@ -918,16 +918,16 @@
        <!-- Query settings -->
        <str name="defType">edismax</str>
        <str name="qf">
-          tags_striped^1.0
+          text^1.0
        </str>
-       <str name="df">tags_striped</str>
+       <str name="df">text</str>
        <str name="mm">100%</str>
        <str name="q.alt">*:*</str>
        <str name="rows">10</str>
        <str name="fl">*,score</str>
 
        <str name="mlt.qf">
-         tags_striped^1.0
+         text^1.0
        </str>
        <str name="mlt.fl">text,features,name,sku,id,manu,cat,title,description,keywords,author,resourcename</str>
        <int name="mlt.count">3</int>
@@ -1324,7 +1324,7 @@
     -->
   <requestHandler name="/spell" class="solr.SearchHandler" startup="lazy">
     <lst name="defaults">
-      <str name="df">tags_striped</str>
+      <str name="df">text</str>
       <!-- Solr will use suggestions from both the 'default' spellchecker
            and from the 'wordbreak' spellchecker and combine them.
            collations (re-written queries) can include a combination of
@@ -1361,7 +1361,7 @@
     -->
   <requestHandler name="/tvrh" class="solr.SearchHandler" startup="lazy">
     <lst name="defaults">
-      <str name="df">tags_striped</str>
+      <str name="df">text</str>
       <bool name="tv">true</bool>
     </lst>
     <arr name="last-components">
@@ -1508,7 +1508,7 @@
   <requestHandler name="/elevate" class="solr.SearchHandler" startup="lazy">
     <lst name="defaults">
       <str name="echoParams">explicit</str>
-      <str name="df">tags_striped</str>
+      <str name="df">text</str>
     </lst>
     <arr name="last-components">
       <str>elevator</str>
