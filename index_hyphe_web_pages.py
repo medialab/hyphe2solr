@@ -245,7 +245,7 @@ if __name__=='__main__':
                     we["status"]=status
                     web_entity_queue.put(we)
                     nb_web_entities+=1
-        mainlog.info("retrieved %s web entities"%(nb_web_entities))
+        mainlog.info("resuming indexation on %s web entities"%(nb_web_entities))
 
         writing_we_done_proc = Process(target=writing_we_done,args=(web_entity_done,))
         writing_we_done_proc.daemon = True
