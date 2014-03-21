@@ -5,6 +5,7 @@
 import sys, time, re, json, os, shutil
 from multiprocessing import Process, JoinableQueue
 import logging
+import html2text
 
 # data sources
 import pymongo
@@ -90,7 +91,8 @@ def index_webentity(web_entity_pile,web_entity_done_pile,hyphe_core,coll,solr):
                     "url":page_mongo["url"],
                     "lru":page_mongo["lru"],
                     "depth":page_mongo["depth"],
-                    "content":body
+                    "html":body,
+                    "text":html2text.textify(body)
                 }
                 
                 #solr_json_docs.append(solr_document)

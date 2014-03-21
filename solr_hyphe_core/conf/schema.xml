@@ -131,13 +131,14 @@
         NOTE: This field is not indexed by default, since it is also copied to "text"
         using copyField below. This is to save space. Use this field for returning and
         highlighting document content. Use the "text" field to search the content. -->
-  <field name="content" type="text_general" indexed="true" stored="true"  termVectors="true"/>
+  <field name="html" type="text_general" indexed="true" stored="true"  termVectors="true"/>
+  <field name="text" type="text_general" indexed="true" stored="true"  termVectors="true"/>
   <field name="encoding" type="string" indexed="true" stored="true" docValues="true"/>
   <field name="original_encoding" type="string" indexed="true" stored="true" docValues="true"/>   
 
    <!-- catchall field, containing all other searchable text fields (implemented
         via copyField further on in this schema  -->
-   <field name="tags_striped" type="text_html" indexed="true" stored="true" termVectors="true"/>
+   <!--<field name="tags_striped" type="text_html" indexed="true" stored="true" termVectors="true"/>-->
 
    
    <!--
@@ -226,7 +227,8 @@
         is added to the index.  It's used either to index the same field differently,
         or to add multiple fields to the same field for easier/faster searching.  -->
 
-   <copyField source="content" dest="tags_striped"/>   
+   <!--<copyField source="content" dest="tags_striped"/>   -->
+   
     <!-- Above, multiple source fields are copied to the [text] field. 
 	  Another way to map multiple source fields to the same 
 	  destination field is to use the dynamic field syntax. 
