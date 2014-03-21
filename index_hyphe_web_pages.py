@@ -87,7 +87,7 @@ def index_webentity(web_entity_pile,web_entity_done_pile,hyphe_core,coll,solr):
                     "id":page_mongo["_id"],
                     "web_entity":we["name"],
                     "web_entity_id":we["id"],
-                    #"web_entity_status":we["status"],
+                    "web_entity_status":we["status"],
                     "corpus":"hyphe",
                     "encoding":encoding,
                     "original_encoding":page_mongo.get("encoding",""),
