@@ -42,7 +42,9 @@ argparse #for python<2.7
 
 You need a hyphe and a solr server running.
 
-Than simply execute (ideally in a virtualenv): 
+git clone this repository
+
+Than simply executes (ideally in a virtualenv): 
 
 	pip install -r requirements.txt
 
@@ -61,8 +63,8 @@ BEWARE : It will erase any hyphe core already present in solr core path.
 
 Copy config.json.default into config.json and edit the parameters :
 - hyphe2core :
-	- "nb_process": number of concurrent process to start
-	- "web_entity_status_filter: a web entity filter to index based on hyphe status
+	- nb_process: number of concurrent process to start
+	- web_entity_status_filter: a web entity filter to index based on hyphe status
 - host/port of Hyphe core
 - host/port/db/collection of mongo hyphe db
 - host/port/path of solr node
