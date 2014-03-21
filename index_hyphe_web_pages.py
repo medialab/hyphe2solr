@@ -47,7 +47,7 @@ def index_webentity(web_entity_pile,web_entity_done_pile,hyphe_core,coll,solr):
         last_id=""
         pages_mongo=[]
         i=0
-        url_slice_len=1000
+        url_slice_len=100
         welog.info("retrieving HTML pages from mongo of web entity %s"%(we["name"]))
         while i<len(urls) :
             urls_slice=urls[i:i+url_slice_len]
@@ -109,7 +109,7 @@ def index_webentity(web_entity_pile,web_entity_done_pile,hyphe_core,coll,solr):
             with open(errors_solr_document_filename,"w") as errors_solr_document_json_file :
                 json.dump(error_solr_doc,errors_solr_document_json_file,indent=4)
         welog.log(logging.INFO,"'%s' indexed (%s web pages on %s)"%(we["name"],nb_pages,len(pages_mongo)))
-        #solr.commit()
+        solr.commit()
         #relying on autocommit
         #welog.info("inserts to solr comited")
         processlog.info("%s: indexed %s Html pages"%(we["name"],nb_pages))
