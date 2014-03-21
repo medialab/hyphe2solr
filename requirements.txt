@@ -3,3 +3,4 @@ lxml
 httplib2
 pymongo
 jsonrpclib
+argparse

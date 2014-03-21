@@ -87,7 +87,7 @@ def index_webentity(web_entity_pile,web_entity_done_pile,hyphe_core,coll,solr):
                     "id":page_mongo["_id"],
                     "web_entity":we["name"],
                     "web_entity_id":we["id"],
-                    "web_entity_status":we["status"],
+                    #"web_entity_status":we["status"],
                     "corpus":"hyphe",
                     "encoding":encoding,
                     "original_encoding":page_mongo.get("encoding",""),
@@ -140,7 +140,7 @@ if __name__=='__main__':
     # usage :
     # --delete_index
     parser = argparse.ArgumentParser()
-    parser.add_argument("--delete_index", help="delete solr index before (re)indexing.\nWARNING all previsou indexing work will be lost.")
+    parser.add_argument("-d","--delete_index", action='store_true', help="delete solr index before (re)indexing.\n\rWARNING all previous indexing work will be lost.")
     args = parser.parse_args()
 
 
@@ -161,8 +161,15 @@ if __name__=='__main__':
             os.makedirs("logs/errors_solr_document")
         if args.delete_index:
             #delete the processed web entity list
-            os.remove("logs/we_id_done.log")
-        
+            if os.path.isfile("logs/we_id_done.log"):
+				os.remove("logs/we_id_done.log")
+            for f in os.listdir("logs/by_pid"):
+            	os.remove(os.path.join("logs/by_pid",f))
+            for f in os.listdir("logs/by_web_entity"):
+				os.remove(os.path.join("logs/by_web_entity",f))
+            for f in os.listdir("logs/errors_solr_document"):
+                os.remove(os.path.join("logs/errors_solr_document",f))
+    
     except Exception as e:
         print type(e), e
         sys.stderr.write('ERROR: Could not create log directory\n')
