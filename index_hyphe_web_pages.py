@@ -85,6 +85,7 @@ def index_webentity(web_entity_pile,web_entity_done_pile,hyphe_core,coll,solr):
                     "id":page_mongo["_id"],
                     "web_entity":we["name"],
                     "web_entity_id":we["id"],
+                    "web_entity_status":we["status"],
                     "corpus":"hyphe",
                     "encoding":encoding,
                     "original_encoding":page_mongo.get("encoding",""),
@@ -221,6 +222,7 @@ if __name__=='__main__':
                 we_id_done=[]
             for we in wes :
                 if we["id"] not in we_id_done:
+                    we["status"]=status
                     web_entity_queue.put(we)
                     nb_web_entities+=1
         mainlog.info("retrieved %s web entities"%(nb_web_entities))

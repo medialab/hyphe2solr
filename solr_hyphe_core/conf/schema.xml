@@ -119,7 +119,9 @@
    <field name="id" type="string" indexed="true" stored="true" required="true" multiValued="false" /> 
         
   <field name="web_entity" type="string" indexed="true" stored="true" docValues="true"/>
-  <field name="web_entity_id" type="string" indexed="true" stored="true"/>
+  <field name="web_entity_id" type="string" indexed="true" stored="true" docValues="true" />
+  <field name="web_entity_status" type="string" indexed="true" stored="true" docValues="true"/>
+
   <field name="corpus" type="string" indexed="true" stored="true" docValues="true"/>
   
   <field name="url" type="string" indexed="true" stored="true" termVectors="true" termPositions="true" termOffsets="true"/>
