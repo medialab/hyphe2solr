@@ -42,7 +42,7 @@ def index_webentity(web_entity_pile,web_entity_done_pile,hyphe_core,coll,solr):
         processlog.info("%s: got %s webpages"%(we["name"],len(we["web_pages"])))
 
         #getting mongo html web page 
-        urls=[page["url"] for page in we["web_pages"] if page["http_status"]!=0]
+        urls=[page["url"] for page in we["web_pages"]] #if page["http_status"]!=0]
         nb_urls=len(urls)
         last_id=""
         pages_mongo=[]
@@ -109,8 +109,8 @@ def index_webentity(web_entity_pile,web_entity_done_pile,hyphe_core,coll,solr):
             with open(errors_solr_document_filename,"w") as errors_solr_document_json_file :
                 json.dump(error_solr_doc,errors_solr_document_json_file,indent=4)
         welog.log(logging.INFO,"'%s' indexed (%s web pages on %s)"%(we["name"],nb_pages,len(pages_mongo)))
-        solr.commit()
-        #relying on autocommit
+	    #solr.commit()
+		#relying on autocommit
         #welog.info("inserts to solr comited")
         processlog.info("%s: indexed %s Html pages"%(we["name"],nb_pages))
         #adding we if to done list
@@ -134,6 +134,7 @@ def writing_we_done(web_entity_done_pile):
             we_id_done_file.write("%s\n"%we_id)
             we_id_done_file.flush()
             web_entity_done_pile.task_done()
+
 
 if __name__=='__main__':
 
