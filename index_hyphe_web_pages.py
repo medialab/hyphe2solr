@@ -240,7 +240,7 @@ if __name__=='__main__':
         mainlog.log(logging.INFO,"web page pile finished, stopping pile logger, mongo retreiver and solr_proc proc")
         pile_logger_proc.terminate()
         writing_we_done_proc.terminate()
-        for hyphe_core in hyphe_core_procs:
+        for hyphe_proc in hyphe_core_procs:
             hyphe_proc.terminate()
         for index in mongo_index:
             coll.drop_index(index)
