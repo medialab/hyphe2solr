@@ -929,7 +929,7 @@
        <str name="mlt.qf">
          text^1.0
        </str>
-       <str name="mlt.fl">text,features,name,sku,id,manu,cat,title,description,keywords,author,resourcename</str>
+       <str name="mlt.fl">text,html,url,lru,web_entity,web_entity_id</str>
        <int name="mlt.count">3</int>
 
        <!-- Faceting defaults -->
@@ -939,7 +939,7 @@
 
        <!-- Highlighting defaults -->
        <str name="hl">on</str>
-       <str name="hl.fl">content features title name</str>
+       <str name="hl.fl">text</str>
        <str name="hl.encoder">html</str>
        <str name="hl.simple.pre">&lt;b&gt;</str>
        <str name="hl.simple.post">&lt;/b&gt;</str>
