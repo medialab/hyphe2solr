@@ -6,6 +6,8 @@ import sys, time, re, json, os, shutil
 from multiprocessing import Process, JoinableQueue
 import logging
 import html2text
+import argparse
+
 
 # data sources
 import pymongo
@@ -134,6 +136,14 @@ def writing_we_done(web_entity_done_pile):
             web_entity_done_pile.task_done()
 
 if __name__=='__main__':
+
+    # usage :
+    # --delete_index
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--delete_index", help="delete solr index before (re)indexing.\nWARNING all previsou indexing work will be lost.")
+    args = parser.parse_args()
+
+
     mainlog=TimeElapsedLogging.create_log("main")
     try:
         with open('config.json') as confile:
@@ -149,7 +159,9 @@ if __name__=='__main__':
             os.makedirs("logs/by_pid")
             os.makedirs("logs/by_web_entity") 
             os.makedirs("logs/errors_solr_document")
-
+        if args.delete_index:
+            #delete the processed web entity list
+            os.remove("logs/we_id_done.log")
         
     except Exception as e:
         print type(e), e
@@ -177,8 +189,9 @@ if __name__=='__main__':
     # solr
     try:
         solr = sunburnt.SolrInterface("http://%s:%s/%s" % (conf["solr"]['host'], conf["solr"]['port'], conf["solr"]['path'].lstrip('/')))
-        #solr.delete_all()
-        #solr.commit()
+        if args.delete_index:
+            solr.delete_all()
+            solr.commit()
     except Exception as e:
         print type(e), e
         sys.stderr.write('ERROR: Could not initiate connection to SOLR node\n')
