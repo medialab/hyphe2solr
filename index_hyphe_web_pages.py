@@ -7,6 +7,9 @@ from multiprocessing import Process, JoinableQueue
 import logging
 import html2text
 import argparse
+import signal
+ 
+
 
 
 # data sources
@@ -137,6 +140,7 @@ def writing_we_done(web_entity_done_pile):
 
 
 if __name__=='__main__':
+
 
     # usage :
     # --delete_index
