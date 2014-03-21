@@ -42,7 +42,7 @@ def index_webentity(web_entity_pile,web_entity_done_pile,hyphe_core,coll,solr):
         processlog.info("%s: got %s webpages"%(we["name"],len(we["web_pages"])))
 
         #getting mongo html web page 
-        urls=[page["url"] for page in we["web_pages"]]
+        urls=[page["url"] for page in we["web_pages"] if page["http_status"]!=0]
         nb_urls=len(urls)
         last_id=""
         pages_mongo=[]
@@ -103,7 +103,7 @@ def index_webentity(web_entity_pile,web_entity_done_pile,hyphe_core,coll,solr):
                      solr.add(solr_document)
                      nb_pages+=1
                 except Exception :
-                    welog.debug("Exception with document :%s %s %s"%(solr_document["id"],solr_document["url"],solr_document["encoding"]))
+                    #welog.debug("Exception with document :%s %s %s"%(solr_document["id"],solr_document["url"],solr_document["encoding"]))
                     error_solr_doc.append({"url":solr_document["url"],"encoding":solr_document["encoding"],"original_encoding":solr_document["original_encoding"]})
         if len(error_solr_doc) >0 :
             with open(errors_solr_document_filename,"w") as errors_solr_document_json_file :
