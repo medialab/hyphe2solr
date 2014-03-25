@@ -31,7 +31,8 @@ def index_webentity(web_entity_pile,web_entity_done_pile,hyphe_core,coll,solr):
         processlog.info("%s: starting processing"%we["name"])
 
         #setting LOG
-        web_entity_log_id="%s_%s"%(we["name"].replace(" ","_"),we["id"])
+        web_entity_name_safe=re.sub(r"[\W]","",we['name'])
+        web_entity_log_id="%s_%s"%(web_entity_name_safe,we["id"])
         logfilename="logs/by_web_entity/%s.log"%web_entity_log_id
         errors_solr_document_filename="logs/errors_solr_document/%s.json"%web_entity_log_id
         welog=TimeElapsedLogging.create_log(we["id"],filename=logfilename)
