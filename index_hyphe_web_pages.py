@@ -102,7 +102,8 @@ def index_webentity(web_entity_pile,web_entity_done_pile,hyphe_core,coll,solr):
             if len(error_solr_doc) >0 :
                 with open(errors_solr_document_filename,"a") as errors_solr_document_json_file :
                     json.dump(error_solr_doc,errors_solr_document_json_file,indent=4)
-            #log
+            del(error_solr_doc)
+			#log
             welog.info("%s %s: indexed %s pages"%(we["name"],we["id"],nb_slice_indexed))
             #processlog.info("indexed %s html pages for %s"%(nb_slice_indexed,(we["name"])))
             # global counters
@@ -123,7 +124,6 @@ def index_webentity(web_entity_pile,web_entity_done_pile,hyphe_core,coll,solr):
         #adding we if to done list
         web_entity_done_pile.put(we["id"])
         del we
-        del error_solr_doc
         web_entity_pile.task_done()
  
 
