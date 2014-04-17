@@ -31,7 +31,8 @@ def index_webentity(web_entity_pile,web_entity_done_pile,hyphe_core,coll,solr):
         processlog.info("%s: starting processing"%we["name"])
 
         #setting LOG
-        web_entity_log_id="%s_%s"%(we["name"].replace(" ","_"),we["id"])
+        web_entity_name_safe=re.sub(r"[\W]","",we['name'])
+        web_entity_log_id="%s_%s"%(web_entity_name_safe,we["id"])
         logfilename="logs/by_web_entity/%s.log"%web_entity_log_id
         errors_solr_document_filename="logs/errors_solr_document/%s.json"%web_entity_log_id
         welog=TimeElapsedLogging.create_log(we["id"],filename=logfilename)
@@ -49,9 +50,11 @@ def index_webentity(web_entity_pile,web_entity_done_pile,hyphe_core,coll,solr):
         nb_urls=len(urls)
         last_id=""
         pages_mongo=[]
+        nb_pages_mongo=0
+        nb_pages_indexed=0
         i=0
-        url_slice_len=100
-        welog.info("retrieving HTML pages from mongo of web entity %s"%(we["name"]))
+        url_slice_len=1000
+        welog.info("retrieving + indexing HTML pages from mongo to solr of web entity %s"%(we["name"]))
         while i<len(urls) :
             urls_slice=urls[i:i+url_slice_len]
             pages_mongo_slice=coll.find({
@@ -60,25 +63,15 @@ def index_webentity(web_entity_pile,web_entity_done_pile,hyphe_core,coll,solr):
                     "body" : {"$exists":True}
                 },
                 fields=["_id","encoding","url","lru","depth","body"])
-            welog.debug("%s %s: got %s pages in slice %s %s"%(we["name"],we["id"],pages_mongo_slice.count(),i,len(urls_slice)))
-            pages_mongo+=list(pages_mongo_slice)
-            i=i+url_slice_len
-        if len(pages_mongo)>0:    
-            welog.info("got %s mongo pages on %s web page urls from %s"%(len(pages_mongo),nb_urls,we["name"]))
-        else:
-            welog.warning("no pages on %s retrieved from %s"%(nb_urls,we["name"]))
-        
-        del we["web_pages"]
-        del web_pages
-        del urls
-       
-        processlog.info("%s: got %s Html pages"%(we["name"],len(pages_mongo)))
-        
-        # indexing in solr
-        welog.info("indexing %s"%we["name"])
-        nb_pages=0
-        error_solr_doc=[]
-        for page_mongo in pages_mongo:       
+            
+            #local counters
+            nb_slice_mongo=pages_mongo_slice.count()
+            nb_slice_indexed=0
+
+            welog.info("%s %s: got %s pages in slice %s %s"%(we["name"],we["id"],nb_slice_mongo,i,len(urls_slice)))
+
+            error_solr_doc=[]
+            for page_mongo in pages_mongo_slice:
                 body = page_mongo["body"].decode('zip')
                 try:
                     body = body.decode(page_mongo.get("encoding",""))
@@ -101,26 +94,37 @@ def index_webentity(web_entity_pile,web_entity_done_pile,hyphe_core,coll,solr):
                     "text":html2text.textify(body)
                 }
                 
-                #solr_json_docs.append(solr_document)
                 try:
                      solr.add(solr_document)
-                     nb_pages+=1
+                     nb_slice_indexed+=1
                 except Exception :
                     #welog.debug("Exception with document :%s %s %s"%(solr_document["id"],solr_document["url"],solr_document["encoding"]))
                     error_solr_doc.append({"url":solr_document["url"],"encoding":solr_document["encoding"],"original_encoding":solr_document["original_encoding"]})
-        if len(error_solr_doc) >0 :
-            with open(errors_solr_document_filename,"w") as errors_solr_document_json_file :
-                json.dump(error_solr_doc,errors_solr_document_json_file,indent=4)
-        welog.log(logging.INFO,"'%s' indexed (%s web pages on %s)"%(we["name"],nb_pages,len(pages_mongo)))
+            if len(error_solr_doc) >0 :
+                with open(errors_solr_document_filename,"a") as errors_solr_document_json_file :
+                    json.dump(error_solr_doc,errors_solr_document_json_file,indent=4)
+            del(error_solr_doc)
+			#log
+            welog.info("%s %s: indexed %s pages"%(we["name"],we["id"],nb_slice_indexed))
+            #processlog.info("indexed %s html pages for %s"%(nb_slice_indexed,(we["name"])))
+            # global counters
+            nb_pages_mongo+=nb_slice_mongo
+            nb_pages_indexed+=nb_slice_indexed
+            i=i+url_slice_len
+
+        
+        del we["web_pages"]
+        del web_pages
+        del urls  
+       
+        welog.log(logging.INFO,"'%s' indexed (%s web pages on %s)"%(we["name"],nb_pages_indexed,nb_pages_mongo))
 	    #solr.commit()
 		#relying on autocommit
         #welog.info("inserts to solr comited")
-        processlog.info("%s: indexed %s Html pages"%(we["name"],nb_pages))
+        processlog.info("%s: indexed %s on %s Html pages"%(we["name"],nb_pages_indexed, nb_pages_mongo))
         #adding we if to done list
         web_entity_done_pile.put(we["id"])
         del we
-        del pages_mongo
-        del error_solr_doc
         web_entity_pile.task_done()
  
 
