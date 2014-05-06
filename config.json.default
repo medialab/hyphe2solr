@@ -1,22 +1,12 @@
 {
-  "hyphe2solr":{
-    "nb_process":10,
-    "web_entity_status_filter":["IN","OUT","UNDECIDED","DISCOVERED"]
+  "google_results":{
+    "type_text": "raw", "other_possible_choice": "canola",
+    "corpora": ["ONGs", "institutions"],
+    "csvpath": "/store-tweets/aesif-data/AESIF-"
   },
   "solr":{
     "host":"localhost",
     "port":"8080",
-    "path":"solr/hyphe"
+    "path":"solr/aesif"
   },
-  "mongo" : {
-    "host" : "localhost",
-    "port" : 27017,
-    "db" : "hci",
-    "web_pages_collection" : "crawler.pages",
-    "contenttype_whitelist_filename" : "content_type_whitelist.txt"
-  },
-  "hyphe-core" : {
-    "host" : "localhost",
-    "port" : 6978
-  }
 }
