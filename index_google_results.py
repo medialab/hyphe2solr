@@ -36,7 +36,7 @@ def index_pages(path, solr):
                 page[k] = page[k].decode('utf-8')
             # logging in proc log
             processlog.info("%s: starting processing" % filename)
-            domain = re_find_domain.sub('', page["url"])
+            domain = re_find_domain.sub(r'\1', page["url"])
             html_id = md5("%s\n" % page['url']).hexdigest()
             solr_document={
                 "id": page["url"],          # use url as id
