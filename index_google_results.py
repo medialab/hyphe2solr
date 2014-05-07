@@ -121,6 +121,7 @@ if __name__=='__main__':
             else: filename = "7-corpus_results_text_canola.csv"
             filepath = os.path.join("%s%s" % (conf['google_results']['csvpath'], corpus), filename)
             index_pages(filepath, solr)
+            mainlog.log(logging.INFO,"finished indexing %s" % corpus)
         solr.commit()
         mainlog.log(logging.INFO,"last solr comit to be sure")
 
