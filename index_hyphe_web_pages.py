@@ -8,7 +8,7 @@ import logging
 import html2text
 import argparse
 import signal
- 
+
 
 
 
@@ -42,10 +42,10 @@ def index_webentity(web_entity_pile,web_entity_done_pile,hyphe_core,coll,solr):
         web_pages = hyphe_core.store.get_webentity_pages(we["id"])
         welog.log(logging.INFO,"retrieved %s pages of web entity %s"%(len(web_pages["result"]),we["name"]))
         we["web_pages"]=web_pages["result"]
-        
+
         processlog.info("%s: got %s webpages"%(we["name"],len(we["web_pages"])))
 
-        #getting mongo html web page 
+        #getting mongo html web page
         urls=[page["url"] for page in we["web_pages"]] #if page["http_status"]!=0]
         nb_urls=len(urls)
         last_id=""
@@ -63,7 +63,7 @@ def index_webentity(web_entity_pile,web_entity_done_pile,hyphe_core,coll,solr):
                     "body" : {"$exists":True}
                 },
                 fields=["_id","encoding","url","lru","depth","body"])
-            
+
             #local counters
             nb_slice_mongo=pages_mongo_slice.count()
             nb_slice_indexed=0
@@ -93,13 +93,13 @@ def index_webentity(web_entity_pile,web_entity_done_pile,hyphe_core,coll,solr):
                     "html":body,
                     "text":html2text.textify(body)
                 }
-                
+
                 try:
                      solr.add(solr_document)
                      nb_slice_indexed+=1
-                except Exception :
+                except Exception as e:
                     #welog.debug("Exception with document :%s %s %s"%(solr_document["id"],solr_document["url"],solr_document["encoding"]))
-                    error_solr_doc.append({"url":solr_document["url"],"encoding":solr_document["encoding"],"original_encoding":solr_document["original_encoding"]})
+                    error_solr_doc.append({"error": "%s: %s" % (type(e), e), "url":solr_document["url"],"encoding":solr_document["encoding"],"original_encoding":solr_document["original_encoding"]})
             if len(error_solr_doc) >0 :
                 with open(errors_solr_document_filename,"a") as errors_solr_document_json_file :
                     json.dump(error_solr_doc,errors_solr_document_json_file,indent=4)
@@ -112,11 +112,11 @@ def index_webentity(web_entity_pile,web_entity_done_pile,hyphe_core,coll,solr):
             nb_pages_indexed+=nb_slice_indexed
             i=i+url_slice_len
 
-        
+
         del we["web_pages"]
         del web_pages
-        del urls  
-       
+        del urls
+
         welog.log(logging.INFO,"'%s' indexed (%s web pages on %s)"%(we["name"],nb_pages_indexed,nb_pages_mongo))
 	    #solr.commit()
 		#relying on autocommit
@@ -126,7 +126,7 @@ def index_webentity(web_entity_pile,web_entity_done_pile,hyphe_core,coll,solr):
         web_entity_done_pile.put(we["id"])
         del we
         web_entity_pile.task_done()
- 
+
 
 def pile_logger(web_entity_pile):
     while True :
@@ -166,7 +166,7 @@ if __name__=='__main__':
         if not os.path.exists("logs"):
             os.makedirs("logs")
             os.makedirs("logs/by_pid")
-            os.makedirs("logs/by_web_entity") 
+            os.makedirs("logs/by_web_entity")
             os.makedirs("logs/errors_solr_document")
         if args.delete_index:
             #delete the processed web entity list
@@ -178,7 +178,7 @@ if __name__=='__main__':
 				os.remove(os.path.join("logs/by_web_entity",f))
             for f in os.listdir("logs/errors_solr_document"):
                 os.remove(os.path.join("logs/errors_solr_document",f))
-    
+
     except Exception as e:
         print type(e), e
         sys.stderr.write('ERROR: Could not create log directory\n')
@@ -223,8 +223,8 @@ if __name__=='__main__':
     try:
         web_entity_queue = JoinableQueue()
         web_entity_done = JoinableQueue()
-        
-        
+
+
         hyphe_core_procs=[]
         for _ in range(conf["hyphe2solr"]["nb_process"]):
             hyphe_core_proc = Process(target=index_webentity, args=(web_entity_queue,web_entity_done,hyphe_core,coll,solr))
@@ -232,11 +232,11 @@ if __name__=='__main__':
             hyphe_core_proc.start()
             hyphe_core_procs.append(hyphe_core_proc)
 
-        
+
         pile_logger_proc = Process(target=pile_logger,args=(web_entity_queue,))
         pile_logger_proc.daemon = True
-        pile_logger_proc.start()    
-        
+        pile_logger_proc.start()
+
 
         web_entity_status=conf["hyphe2solr"]["web_entity_status_filter"]
         nb_web_entities=0
@@ -267,7 +267,7 @@ if __name__=='__main__':
         mainlog.log(logging.INFO,"waiting end of web entity done writing pile")
         web_entity_done.join()
 
-        
+
         mainlog.log(logging.INFO,"web page pile finished, stopping pile logger, mongo retreiver and solr_proc proc")
         pile_logger_proc.terminate()
         writing_we_done_proc.terminate()
@@ -275,7 +275,7 @@ if __name__=='__main__':
             hyphe_proc.terminate()
         for index in mongo_index:
             coll.drop_index(index)
-      
+
         solr.commit()
         mainlog.log(logging.INFO,"last solr comit to be sure")
 
