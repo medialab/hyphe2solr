@@ -118,15 +118,14 @@
    -->   
    <field name="id" type="string" indexed="true" stored="true" required="true" multiValued="false" /> 
         
-  <field name="web_entity" type="string" indexed="true" stored="true" docValues="true"/>
-  <field name="web_entity_id" type="string" indexed="true" stored="true" docValues="true" />
-  <field name="web_entity_status" type="string" indexed="true" stored="true" docValues="true"/>
+  <field name="site" type="string" indexed="true" stored="true" docValues="true"/>
 
   <field name="corpus" type="string" indexed="true" stored="true" docValues="true"/>
   
   <field name="url" type="string" indexed="true" stored="true" termVectors="true" termPositions="true" termOffsets="true"/>
-  <field name="lru" type="string" indexed="true" stored="true" termVectors="true" termPositions="true" termOffsets="true"/>
-  <field name="depth" type="int" indexed="true" stored="true" />
+  <field name="categories" type="string" indexed="true" stored="true" termVectors="true" termPositions="true" termOffsets="true"/>
+  <field name="date" type="date" indexed="true" stored="true" termVectors="true" termPositions="true" termOffsets="true"/>
+  <field name="year" type="int" indexed="true" stored="true" termVectors="true" termPositions="true" termOffsets="true"/>
   
 
    <!-- Main body of document extracted by SolrCell.
@@ -135,8 +134,7 @@
         highlighting document content. Use the "text" field to search the content. -->
   <field name="html" type="text_general" indexed="true" stored="true"  termVectors="true"/>
   <field name="text" type="text_general" indexed="true" stored="true"  termVectors="true"/>
-  <field name="encoding" type="string" indexed="true" stored="true" docValues="true"/>
-  <field name="original_encoding" type="string" indexed="true" stored="true" docValues="true"/>   
+  <field name="title" type="text_general" indexed="true" stored="true"  termVectors="true"/>
 
    <!-- catchall field, containing all other searchable text fields (implemented
         via copyField further on in this schema  -->
