@@ -9,9 +9,6 @@ import html2text
 import argparse
 import signal
 
-
-
-
 # data sources
 import pymongo
 import sunburnt
@@ -21,10 +18,9 @@ import jsonrpclib
 import TimeElapsedLogging
 
 
-def index_webentity(web_entity_pile,web_entity_done_pile,hyphe_core,coll,solr):
+def index_webentity(web_entity_pile,web_entity_done_pile,hyphe_core,coll,solr, corpus):
     processlog=TimeElapsedLogging.create_log(str(os.getpid()),filename="logs/by_pid/%s.log"%os.getpid())
     processlog.info("starting infinite loop")
-    #hyphe_core=jsonrpclib.Server(hyphe_core_url)
     while True :
         we=web_entity_pile.get()
         # logging in proc log
@@ -39,7 +35,7 @@ def index_webentity(web_entity_pile,web_entity_done_pile,hyphe_core,coll,solr):
 
         #getting web pages URLS
         welog.log(logging.INFO,"retrieving pages of web entity %s"%(we["name"]))
-        web_pages = hyphe_core.store.get_webentity_pages(we["id"])
+        web_pages = hyphe_core.store.get_webentity_pages(we["id"], True, corpus)
         welog.log(logging.INFO,"retrieved %s pages of web entity %s"%(len(web_pages["result"]),we["name"]))
         we["web_pages"]=web_pages["result"]
 
@@ -84,7 +80,7 @@ def index_webentity(web_entity_pile,web_entity_done_pile,hyphe_core,coll,solr):
                     "web_entity":we["name"],
                     "web_entity_id":we["id"],
                     "web_entity_status":we["status"],
-                    "corpus":"hyphe",
+                    "corpus":conf['hyphe-core']['corpus_id'],
                     "encoding":encoding,
                     "original_encoding":page_mongo.get("encoding",""),
                     "url":page_mongo["url"],
@@ -131,7 +127,7 @@ def index_webentity(web_entity_pile,web_entity_done_pile,hyphe_core,coll,solr):
 def pile_logger(web_entity_pile):
     while True :
         time.sleep(1)
-        sys.stdout.write("\r%s items in web entity pile" %web_entity_pile.qsize())    # or print >> sys.stdout, "\r%d%%" %i,
+        sys.stdout.write("\r%s items in web entity pile" %web_entity_pile.qsize())
         sys.stdout.flush()
 
 def writing_we_done(web_entity_done_pile):
@@ -142,6 +138,8 @@ def writing_we_done(web_entity_done_pile):
             we_id_done_file.flush()
             web_entity_done_pile.task_done()
 
+re_solrname = re.compile(r"^.*/([^/]+)$")
+get_solr_instance_name = lambda solrpath: re_solrname.sub(r"\1", solrpath)
 
 if __name__=='__main__':
 
@@ -158,7 +156,7 @@ if __name__=='__main__':
         with open('config.json') as confile:
             conf = json.loads(confile.read())
     except Exception as e:
-        print type(e), e
+        sys.stderr.write("%s: %s\n" % (type(e), e))
         sys.stderr.write('ERROR: Could not read configuration\n')
         sys.exit(1)
 
@@ -180,14 +178,15 @@ if __name__=='__main__':
                 os.remove(os.path.join("logs/errors_solr_document",f))
 
     except Exception as e:
-        print type(e), e
+        sys.stderr.write("%s: %s\n" % (type(e), e))
         sys.stderr.write('ERROR: Could not create log directory\n')
         sys.exit(1)
 
     #mongodb
     try:
         db = pymongo.MongoClient(conf['mongo']['host'], conf['mongo']['port'])
-        coll = db[conf["mongo"]["db"]][conf['mongo']['web_pages_collection']]
+        collname = "%s.pages" % conf['hyphe-core']['corpus_id']
+        coll = db[conf["mongo"]["db"]][collname]
         mongo_index=[]
         mainlog.info("creating mongo indexes")
         mongo_index.append(coll.create_index([('url', pymongo.ASCENDING)], background=True))
@@ -199,25 +198,30 @@ if __name__=='__main__':
         with open(conf['mongo']['contenttype_whitelist_filename']) as content_type_whitelist :
             accepted_content_types=content_type_whitelist.read().split("\n")
     except Exception as e:
-        print type(e), e
+        sys.stderr.write("%s: %s\n" % (type(e), e))
         sys.stderr.write('ERROR: Could not initiate connection to MongoDB\n')
         sys.exit(1)
     # solr
     try:
-        solr = sunburnt.SolrInterface("http://%s:%s/%s" % (conf["solr"]['host'], conf["solr"]['port'], conf["solr"]['path'].lstrip('/')))
+        solr = sunburnt.SolrInterface("http://%s:%s/solr/%s" % (conf["solr"]['host'], conf["solr"]['port'], get_solr_instance_name(conf["solr"]['path'])))
         if args.delete_index:
             solr.delete_all()
             solr.commit()
     except Exception as e:
-        print type(e), e
+        sys.stderr.write("%s: %s\n" % (type(e), e))
         sys.stderr.write('ERROR: Could not initiate connection to SOLR node\n')
         sys.exit(1)
     # hyphe core
     try:
         hyphe_core=jsonrpclib.Server('http://%s:%s'%(conf["hyphe-core"]["host"],conf["hyphe-core"]["port"]))
     except Exception as e:
-        print type(e), e
+        sys.stderr.write("%s: %s\n" % (type(e), e))
         sys.stderr.write('ERROR: Could not initiate connection to hyphe core\n')
+        sys.exit(1)
+
+    res = hyphe_core.ping(conf['hyphe-core']['corpus_id'], 10)
+    if "message" in res:
+        sys.stderr.write("ERROR: please start or create corpus %s before indexing it: %s\n" % (conf['hyphe-core']['corpus_id'], res['message']))
         sys.exit(1)
 
     try:
@@ -227,7 +231,7 @@ if __name__=='__main__':
 
         hyphe_core_procs=[]
         for _ in range(conf["hyphe2solr"]["nb_process"]):
-            hyphe_core_proc = Process(target=index_webentity, args=(web_entity_queue,web_entity_done,hyphe_core,coll,solr))
+            hyphe_core_proc = Process(target=index_webentity, args=(web_entity_queue,web_entity_done,hyphe_core,coll,solr, conf['hyphe-core']['corpus_id']))
             hyphe_core_proc.daemon = True
             hyphe_core_proc.start()
             hyphe_core_procs.append(hyphe_core_proc)
@@ -242,7 +246,13 @@ if __name__=='__main__':
         nb_web_entities=0
         for status in web_entity_status :
             mainlog.info("retrieving %s web entities"%(status))
-            wes=hyphe_core.store.get_webentities_by_status(status)["result"]
+            wes = []
+            res = hyphe_core.store.get_webentities_by_status(status, None, 10, 0, conf['hyphe-core']['corpus_id'])["result"]
+            wes += res['webentities']
+            while res["next_page"]:
+                res = hyphe_core.store.get_webentities_page(res["token"], res["next_page"], conf['hyphe-core']['corpus_id'])["result"]
+                wes += res['webentities']
+
             mainlog.info("retrieved %s web entities"%(len(wes)))
             try:
                 with open("logs/we_id_done.log","r") as we_id_done_file:
@@ -283,4 +293,4 @@ if __name__=='__main__':
         mainlog.log(logging.INFO,"Solr index optimized")
     except Exception as e :
         logging.exception("%s %s"%(type(e),e))
-    exit(0)
+    sys.exit(0)

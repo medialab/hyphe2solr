@@ -3,8 +3,6 @@
 # mongodb
 import pymongo,sys,json
 
-
-
 try:
     with open('config.json') as confile:
         conf = json.loads(confile.read())
@@ -15,19 +13,19 @@ except Exception as e:
 
 try:
     db = pymongo.Connection(conf['mongo']['host'], conf['mongo']['port'])[conf["mongo"]["db"]]
-    coll = db[conf['mongo']['web_pages_collection']]
+    coll = db["%s.pages" % conf['hyphe-core']['corpus_id']]
     index=coll.create_index([('content_type', pymongo.ASCENDING)], background=True)
 except Exception as e:
     print type(e), e
     sys.stderr.write('ERROR: Could not initiate connection to MongoDB\n')
     sys.exit(1)
 
-content_types_grouped = coll.aggregate( [ 
+content_types_grouped = coll.aggregate( [
     { "$group": { "_id": "$content_type","count": {"$sum": 1}}  }
 ])
 coll.drop_index(index)
 
-with open("content_type_whitelist.csv","w") as content_type_whitelist :
+with open("content_type_whitelist.txt","w") as content_type_whitelist :
 	content_type_whitelist.write("%s,%s\n"%("content_type","count"))
 	content_types_grouped["result"].sort(key=lambda e:e["count"],reverse=True)
 	for d in content_types_grouped["result"] :
