@@ -247,7 +247,7 @@ if __name__=='__main__':
         for status in web_entity_status :
             mainlog.info("retrieving %s web entities"%(status))
             wes = []
-            res = hyphe_core.store.get_webentities_by_status(status, None, 10, 0, conf['hyphe-core']['corpus_id'])["result"]
+            res = hyphe_core.store.get_webentities_by_status(status, None, 500, 0, conf['hyphe-core']['corpus_id'])["result"]
             wes += res['webentities']
             while res["next_page"]:
                 res = hyphe_core.store.get_webentities_page(res["token"], res["next_page"], conf['hyphe-core']['corpus_id'])["result"]
