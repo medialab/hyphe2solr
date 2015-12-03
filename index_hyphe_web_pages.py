@@ -55,6 +55,7 @@ def index_webentity(web_entity_pile,web_entity_done_pile,hyphe_core,coll,solr, c
             urls_slice=urls[i:i+url_slice_len]
             pages_mongo_slice=coll.find({
                     "url": {"$in": urls_slice},
+                    "status": 200,
                     "content_type": {"$in": accepted_content_types},
                     "body" : {"$exists":True}
                 },
