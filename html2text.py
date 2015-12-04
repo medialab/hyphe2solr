@@ -8,7 +8,7 @@ try:
 except ImportError: #Python3
     import html.entities as htmlentitydefs
 
-#inputs : 
+#inputs :
 # html code in unicode string or will try to decode some known encodings
 # extractor method
 # encoding
@@ -79,7 +79,7 @@ def textify(html_text,extractor="RegExp", encoding="UTF8"):
 
     def replaceEntities(s):
         s = s.group(1)
-        if s[0] == "#": 
+        if s[0] == "#":
             return charref(s[1:])
         else: return entityref(s)
 
@@ -93,7 +93,7 @@ def textify(html_text,extractor="RegExp", encoding="UTF8"):
     re_clean_comments = re.compile(r'<!--.*?-->', re.I|re.DOTALL)
     re_clean_javascript = re.compile(r'<script[^>]*/?>.*?</script>', re.I|re.DOTALL)
     re_clean_style = re.compile(r'<style[^>]*/?>.*?</style>', re.I|re.DOTALL)
-    re_clean_balises = re.compile(r'<[/!]?\[?[a-z0-9\-]+[^>]*>', re.I|re.DOTALL)
+    re_clean_balises = re.compile(r'<[/!?]?\[?[a-z0-9\-]+[^>]*>', re.I|re.DOTALL)
     #re_clean_blanks = re.compile(r'[ \s]+')
     re_clean_blanks = re.compile(r'[ \t\f\v]+')
     re_clean_multiCR = re.compile(r'( ?[\n\r]+)+',re.M)
