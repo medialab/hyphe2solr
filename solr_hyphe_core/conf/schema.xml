@@ -62,6 +62,16 @@
        1.5: omitNorms defaults to true for primitive field types 
             (int, float, boolean, string...)
      -->
+ <searchComponent name="tvComponent" class="org.apache.solr.handler.component.TermVectorComponent"/>
+ <requestHandler name="/tvrh" class="org.apache.solr.handler.component.SearchHandler">
+  <lst name="defaults">
+    <bool name="tv">true</bool>
+    <str name="wt">json</str>
+  </lst>
+  <arr name="last-components">
+    <str>tvComponent</str>
+  </arr>
+</requestHandler>
 
  <fields>
    <!-- Valid attributes for fields:
