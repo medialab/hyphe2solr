@@ -18,11 +18,18 @@ import jsonrpclib
 import TimeElapsedLogging
 
 
-def index_webentity(web_entity_pile,web_entity_done_pile,hyphe_core,coll,solr, corpus):
+def index_webentity(web_entity_pile,web_entity_done_pile,conf,mainlog):
     processlog=TimeElapsedLogging.create_log(str(os.getpid()),filename="logs/by_pid/%s.log"%os.getpid())
     processlog.info("starting infinite loop")
+    corpus = conf['hyphe-core']['corpus_id']
+    solr = sunburnt.SolrInterface("http://%s:%s/solr/%s" % (conf["solr"]['host'], conf["solr"]['port'], get_solr_instance_name(conf["solr"]['path'])))
+    hyphe_core=jsonrpclib.Server('http://%s:%s'%(conf["hyphe-core"]["host"], conf["hyphe-core"]["port"]), version=1)
+    db = pymongo.MongoClient(conf['mongo']['host'], conf['mongo']['port'])
+    collname = "%s.pages" % conf['hyphe-core']['corpus_id']
+    coll = db[conf["mongo"]["db"]][collname]
     while True :
         we=web_entity_pile.get()
+
         # logging in proc log
         processlog.info("%s: starting processing"%we["name"])
 
@@ -35,7 +42,10 @@ def index_webentity(web_entity_pile,web_entity_done_pile,hyphe_core,coll,solr, c
 
         #getting web pages URLS
         welog.log(logging.INFO,"retrieving pages of web entity %s"%(we["name"]))
+        #mainlog.info("DEBUG %s"%(we["id"]))
         web_pages = hyphe_core.store.get_webentity_pages(we["id"], True, corpus)
+        if (web_pages['code'] == 'fail') :
+            mainlog.info(we_pages['message'])
         welog.log(logging.INFO,"retrieved %s pages of web entity %s"%(len(web_pages["result"]),we["name"]))
         we["web_pages"]=web_pages["result"]
 
@@ -51,18 +61,19 @@ def index_webentity(web_entity_pile,web_entity_done_pile,hyphe_core,coll,solr, c
         i=0
         url_slice_len=1000
         welog.info("retrieving + indexing HTML pages from mongo to solr of web entity %s"%(we["name"]))
+
         while i<len(urls) :
             urls_slice=urls[i:i+url_slice_len]
-            pages_mongo_slice=coll.find({
+            pages_mongo_slice=list(coll.find({
                     "url": {"$in": urls_slice},
                     "status": 200,
                     "content_type": {"$in": accepted_content_types},
                     "body" : {"$exists":True}
                 },
-                fields=["_id","encoding","url","lru","depth","body"])
-
+                projection=["_id","encoding","url","lru","depth","body"]))
+            #mainlog.info(str(len(pages_mongo_slice)))
             #local counters
-            nb_slice_mongo=pages_mongo_slice.count()
+            nb_slice_mongo=len(pages_mongo_slice)
             nb_slice_indexed=0
 
             welog.info("%s %s: got %s pages in slice %s %s"%(we["name"],we["id"],nb_slice_mongo,i,len(urls_slice)))
@@ -88,15 +99,18 @@ def index_webentity(web_entity_pile,web_entity_done_pile,hyphe_core,coll,solr, c
                     "lru":page_mongo["lru"],
                     "depth":page_mongo["depth"],
                     "html":body,
-                    "text":html2text.textify(body)
+                    "text":html2text.textify(body, encoding)
                 }
 
                 try:
                      solr.add(solr_document)
                      nb_slice_indexed+=1
                 except Exception as e:
+                    # mainlog.info("ERROR %s: %s %s" %(type(e),e, solr_document))
                     #welog.debug("Exception with document :%s %s %s"%(solr_document["id"],solr_document["url"],solr_document["encoding"]))
                     error_solr_doc.append({"error": "%s: %s" % (type(e), e), "url":solr_document["url"],"encoding":solr_document["encoding"],"original_encoding":solr_document["original_encoding"]})
+                    # import traceback
+                    # traceback.print_exc()
             if len(error_solr_doc) >0 :
                 with open(errors_solr_document_filename,"a") as errors_solr_document_json_file :
                     json.dump(error_solr_doc,errors_solr_document_json_file,indent=4)
@@ -115,7 +129,7 @@ def index_webentity(web_entity_pile,web_entity_done_pile,hyphe_core,coll,solr, c
         del urls
 
         welog.log(logging.INFO,"'%s' indexed (%s web pages on %s)"%(we["name"],nb_pages_indexed,nb_pages_mongo))
-	    #solr.commit()
+        solr.commit()
 		#relying on autocommit
         #welog.info("inserts to solr comited")
         processlog.info("%s: indexed %s on %s Html pages"%(we["name"],nb_pages_indexed, nb_pages_mongo))
@@ -142,8 +156,8 @@ def writing_we_done(web_entity_done_pile):
 re_solrname = re.compile(r"^.*/([^/]+)$")
 get_solr_instance_name = lambda solrpath: re_solrname.sub(r"\1", solrpath)
 
-if __name__=='__main__':
 
+if __name__=='__main__':
 
     # usage :
     # --delete_index
@@ -153,6 +167,7 @@ if __name__=='__main__':
 
 
     mainlog=TimeElapsedLogging.create_log("main")
+    #Load conf
     try:
         with open('config.json') as confile:
             conf = json.loads(confile.read())
@@ -214,7 +229,7 @@ if __name__=='__main__':
         sys.exit(1)
     # hyphe core
     try:
-        hyphe_core=jsonrpclib.Server('http://%s:%s'%(conf["hyphe-core"]["host"],conf["hyphe-core"]["port"]))
+        hyphe_core=jsonrpclib.Server('http://%s:%s'%(conf["hyphe-core"]["host"], conf["hyphe-core"]["port"]), version=1)
     except Exception as e:
         sys.stderr.write("%s: %s\n" % (type(e), e))
         sys.stderr.write('ERROR: Could not initiate connection to hyphe core\n')
@@ -232,7 +247,7 @@ if __name__=='__main__':
 
         hyphe_core_procs=[]
         for _ in range(conf["hyphe2solr"]["nb_process"]):
-            hyphe_core_proc = Process(target=index_webentity, args=(web_entity_queue,web_entity_done,hyphe_core,coll,solr, conf['hyphe-core']['corpus_id']))
+            hyphe_core_proc = Process(target=index_webentity, args=(web_entity_queue,web_entity_done,conf,mainlog))
             hyphe_core_proc.daemon = True
             hyphe_core_proc.start()
             hyphe_core_procs.append(hyphe_core_proc)
