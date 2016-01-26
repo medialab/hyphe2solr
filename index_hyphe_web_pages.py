@@ -129,7 +129,15 @@ def index_webentity(web_entity_pile,web_entity_done_pile,conf,mainlog):
         del urls
 
         welog.log(logging.INFO,"'%s' indexed (%s web pages on %s)"%(we["name"],nb_pages_indexed,nb_pages_mongo))
-        solr.commit()
+        try:
+            solr.commit()
+        except Exception as e:
+            mainlog.info("ERROR %s: %s" %(type(e), e))
+            mainlog.info("Retrying...")
+            try:
+                solr.commit()
+            except Exception as e:
+                mainlog.info("STILL BROKEN, giving up on %s %s" % (we['id'], we['name']))
 		#relying on autocommit
         #welog.info("inserts to solr comited")
         processlog.info("%s: indexed %s on %s Html pages"%(we["name"],nb_pages_indexed, nb_pages_mongo))
