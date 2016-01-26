@@ -98,7 +98,7 @@ def index_webentity(web_entity_pile,web_entity_done_pile,conf,mainlog):
                     "url":page_mongo["url"],
                     "lru":page_mongo["lru"],
                     "depth":page_mongo["depth"],
-                    "html":body,
+                    #"html":body,
                     "text":html2text.textify(body, encoding)
                 }
 
