@@ -17,7 +17,6 @@ import jsonrpclib
 # logging
 import TimeElapsedLogging
 
-
 def index_webentity(web_entity_pile,web_entity_done_pile,conf,mainlog):
     processlog=TimeElapsedLogging.create_log(str(os.getpid()),filename="logs/by_pid/%s.log"%os.getpid())
     processlog.info("starting infinite loop")
@@ -99,7 +98,8 @@ def index_webentity(web_entity_pile,web_entity_done_pile,conf,mainlog):
                     "lru":page_mongo["lru"],
                     "depth":page_mongo["depth"],
                     #"html":body,
-                    "text":html2text.textify(body, encoding)
+                    "text":html2text.textify(body, extractor="raw", encoding=encoding)
+                    #"textCanola":html2text.textify(body, extractor="CanolaExtractor", encoding=encoding)
                 }
 
                 try:
@@ -108,7 +108,7 @@ def index_webentity(web_entity_pile,web_entity_done_pile,conf,mainlog):
                 except Exception as e:
                     # mainlog.info("ERROR %s: %s %s" %(type(e),e, solr_document))
                     #welog.debug("Exception with document :%s %s %s"%(solr_document["id"],solr_document["url"],solr_document["encoding"]))
-                    error_solr_doc.append({"error": "%s: %s" % (type(e), e), "url":solr_document["url"],"encoding":solr_document["encoding"],"original_encoding":solr_document["original_encoding"]})
+                    error_solr_doc.append({"text": solr_document["text"],"body": body, "error": "%s: %s" % (type(e), e), "url":solr_document["url"],"encoding":solr_document["encoding"],"original_encoding":solr_document["original_encoding"]})
                     # import traceback
                     # traceback.print_exc()
             if len(error_solr_doc) >0 :
@@ -213,7 +213,7 @@ if __name__=='__main__':
         coll = db[conf["mongo"]["db"]][collname]
         mongo_index=[]
         mainlog.info("creating mongo indexes")
-        mongo_index.append(coll.create_index([('url', pymongo.ASCENDING)], background=True))
+        #mongo_index.append(coll.create_index([('url', pymongo.ASCENDING)], background=True))
         mainlog.info('index on url done')
         mongo_index.append(coll.create_index([('content_type', pymongo.ASCENDING)], background=True))
         mainlog.info("index on content_type done")
@@ -307,8 +307,8 @@ if __name__=='__main__':
         writing_we_done_proc.terminate()
         for hyphe_proc in hyphe_core_procs:
             hyphe_proc.terminate()
-        for index in mongo_index:
-            coll.drop_index(index)
+        # for index in mongo_index:
+        #     coll.drop_index(index)
 
         solr.commit()
         mainlog.log(logging.INFO,"last solr comit to be sure")

@@ -13,7 +13,7 @@ except ImportError: #Python3
 # extractor method
 # encoding
 
-def textify(html_text,extractor="RegExp", encoding="UTF8"):
+def textify(html_text,extractor="raw", encoding="UTF8"):
 
     if not isinstance(html_text, unicode):
         try:
@@ -31,18 +31,21 @@ def textify(html_text,extractor="RegExp", encoding="UTF8"):
                         print "ERROR conv to unicode", e
     else:
         html_text_unicode = html_text
+    if not html_text_unicode:
+        return ""
 
-    if extractor.lower() == "boilerpipe":
+    if extractor.lower() != "raw":
         try:
-            from boilerpipe.abstract import Boilerpipe
-            bp = Boilerpipe(html_text_unicode)
-            text = bp.extract(extractor)
+            from boilerpipe.extract import Extractor
+            bp = Extractor(extractor=extractor, html=html_text_unicode)
+            return bp.getText()
         except Exception:
             try:
-                bp = Boilerpipe(html_text)
-                text = bp.extract(extractor)
+                bp = Extractor(extractor=extractor, html=html_text)
+                return bp.getText()
             except Exception as e:
-                sys.stderr.write("ERROR converting %s in unicode to extract text with BoilerPipe:\n%s\n" % (file_path, e))
+                sys.stderr.write("ERROR running %s boilerpipe on %s:\n%s: %s\n" % (extractor, html_text, type(e), e))
+                return ""
         del bp
     else:
         text = html_text_unicode
