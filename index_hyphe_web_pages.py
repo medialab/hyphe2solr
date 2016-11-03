@@ -35,14 +35,18 @@ def index_webentity(web_entity_pile,web_entity_done_pile,conf,mainlog):
         #setting LOG
         web_entity_name_safe=re.sub(r"[\W]","",we['name'])
         web_entity_log_id="%s_%s"%(web_entity_name_safe,we["id"])
-        logfilename="logs/by_web_entity/%s.log"%web_entity_log_id
-        errors_solr_document_filename="logs/errors_solr_document/%s.json"%web_entity_log_id
+        logfilename="logs/by_web_entity/%s.log"%(web_entity_log_id[:80])
+        errors_solr_document_filename="logs/errors_solr_document/%s.json"%(web_entity_log_id[:80])
         welog=TimeElapsedLogging.create_log(we["id"],filename=logfilename)
 
         #getting web pages URLS
         welog.log(logging.INFO,"retrieving pages of web entity %s"%(we["name"]))
         #mainlog.info("DEBUG %s"%(we["id"]))
-        web_pages = hyphe_core.store.get_webentity_pages(we["id"], True, corpus)
+        try:
+            web_pages = hyphe_core.store.get_webentity_pages(we["id"], True, corpus)
+        except:
+            web_pages = hyphe_core.store.get_webentity_pages(we["id"], True, corpus)
+
         if (web_pages['code'] == 'fail') :
             mainlog.info(we_pages['message'])
         welog.log(logging.INFO,"retrieved %s pages of web entity %s"%(len(web_pages["result"]),we["name"]))
